@@ -1,0 +1,25 @@
+# Pasta de uploads (dados sensíveis)
+uploads/
+
+# Arquivos Excel com dados
+*.xlsx
+*.xls
+
+# Observações (dados sensíveis)
+observacoes_inadimplencia.json
+
+# Logs
+*.log
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ambiente virtual
+venv/
+env/
+
+# Arquivos temporários
+*.tmp
+*.temp

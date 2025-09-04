@@ -1,0 +1,1 @@
+web: gunicorn servidor_relatorio_inadimplencia:app
