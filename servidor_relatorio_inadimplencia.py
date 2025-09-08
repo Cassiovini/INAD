@@ -637,6 +637,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 }}
                 .tabela-container {{
                     padding: 30px;
+                    overflow-x: auto;
                 }}
                 .tabela-container h2 {{
                     color: #495057;
@@ -652,6 +653,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     overflow: hidden;
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }}
+                thead th {{ position: sticky; top: 0; background: #ffffff; z-index: 1; }}
+                th, td {{ white-space: nowrap; }}
                 th {{
                     background-color: #495057;
                     color: white;
@@ -1076,8 +1079,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             </div>
                             
                             <div class="form-group">
-                                <label for="codigo_vendedor">Código do Vendedor:</label>
-                                <input type="text" id="codigo_vendedor" name="codigo_vendedor" placeholder="Ex: 976" required>
+                                <label for="codigo_vendedor">Código do Cliente:</label>
+                                <input type="text" id="codigo_vendedor" name="codigo_vendedor" placeholder="Ex: 12345" required>
                             </div>
                             
                             <div class="form-group">
