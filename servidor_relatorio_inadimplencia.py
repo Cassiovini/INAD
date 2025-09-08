@@ -803,7 +803,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <h1>📊 Relatório de Inadimplência</h1>
                     <p>Análise detalhada de títulos em atraso</p>
                     <div class="upload-inline">
-                        <form id="uploadFormInline" enctype="multipart/form-data" onsubmit="event.preventDefault(); const fd=new FormData(this); if(!fd.get('arquivo')){alert('Selecione um arquivo.'); return;} fetch('/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ location.reload(); } else { alert('Erro: '+d.error); }}).catch(e=>alert('Erro no upload: '+e));">
+                        <form id="uploadFormInline" enctype="multipart/form-data">
                             <input type="file" id="arquivoInline" name="arquivo" accept=".xlsx,.xls" required>
                             <label for="arquivoInline" class="file-label">📁 Selecionar Excel</label>
                             <button type="submit" class="btn-upload">📤 Enviar</button>
@@ -1045,6 +1045,25 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             </div>
             
             <script>
+            // Upload embutido no cabeçalho (evita f-string dentro do atributo onsubmit)
+            (function(){
+                const form = document.getElementById('uploadFormInline');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const fileInput = document.getElementById('arquivoInline');
+                        if (!fileInput || fileInput.files.length === 0) {
+                            alert('Selecione um arquivo.');
+                            return;
+                        }
+                        const fd = new FormData(form);
+                        fetch('/upload', { method: 'POST', body: fd })
+                            .then(r => r.json())
+                            .then(d => { if (d.success) { location.reload(); } else { alert('Erro: ' + d.error); } })
+                            .catch(err => alert('Erro no upload: ' + err));
+                    });
+                }
+            })();
             function enviarObservacao(event) {{
                 event.preventDefault();
                 
