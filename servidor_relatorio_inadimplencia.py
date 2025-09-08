@@ -175,6 +175,46 @@ def obter_dados_inadimplencia():
         except Exception as _:
             pass
 
+        # ================================
+        # Unificação por BASE_RCA (MESMO COD / MESMO VEND)
+        # ================================
+        try:
+            df_rca = pd.read_excel(arquivo_excel, sheet_name='BASE_RCA')
+            cols = {c.upper(): c for c in df_rca.columns}
+            # Normalizar nomes de colunas para lookup
+            tem_rca = 'RCA' in cols or 'COD' in cols
+            col_rca = cols.get('RCA', cols.get('COD'))
+            col_nome = cols.get('NOME_RCA', cols.get('NOME'))
+            col_mesmo_cod = cols.get('MESMO COD') or cols.get('MESMO_COD')
+            col_mesmo_vend = cols.get('MESMO VEND') or cols.get('MESMO_VEND')
+
+            mapa_rca_para_nome = {}
+            mapa_rca_para_cod = {}
+            if tem_rca and (col_mesmo_vend or col_nome):
+                # Base de mapeamento preferencial: MESMO VEND / MESMO COD
+                if col_mesmo_vend and col_mesmo_cod:
+                    tmp = df_rca[[col_rca, col_mesmo_cod, col_mesmo_vend]].copy()
+                    tmp[col_rca] = tmp[col_rca].astype(str)
+                    tmp[col_mesmo_cod] = tmp[col_mesmo_cod].astype(str)
+                    tmp[col_mesmo_vend] = tmp[col_mesmo_vend].astype(str)
+                    mapa_rca_para_nome = dict(zip(tmp[col_rca], tmp[col_mesmo_vend]))
+                    mapa_rca_para_cod = dict(zip(tmp[col_rca], tmp[col_mesmo_cod]))
+                else:
+                    tmp = df_rca[[col_rca, col_nome]].copy()
+                    tmp[col_rca] = tmp[col_rca].astype(str)
+                    tmp[col_nome] = tmp[col_nome].astype(str)
+                    mapa_rca_para_nome = dict(zip(tmp[col_rca], tmp[col_nome]))
+
+            if mapa_rca_para_nome:
+                df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str).map(mapa_rca_para_cod).fillna(df_inadimplencia['COD_VENDEDOR'].astype(str))
+                df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str).map(mapa_rca_para_nome).fillna(df_inadimplencia['NOME_VENDEDOR'])
+            else:
+                df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str)
+                df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['NOME_VENDEDOR']
+        except Exception:
+            df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str)
+            df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['NOME_VENDEDOR']
+
         # MOSTRAR INADIMPLÊNCIA GERAL (INCLUINDO VENDEDORES QUE SAÍRAM)
         logger.info(f"📊 Total de registros de inadimplência: {len(df_inadimplencia)}")
         logger.info(f"✅ Dados de inadimplência carregados (incluindo vendedores que saíram)")
@@ -473,12 +513,12 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
         total_valor_pago = df_inadimplencia['VALOR_PAGO'].sum()
         total_em_aberto = total_valor_inadimplencia - total_valor_pago
         
-        # Gerar opções de vendedores para o filtro
-        # Unificar por nome do vendedor (um vendedor pode ter 2 RCAs)
-        vendedores_unicos = df_inadimplencia[['NOME_VENDEDOR']].drop_duplicates()
+        # Gerar opções de vendedores para o filtro com unificação
+        base_nomes = 'NOME_UNIFICADO' if 'NOME_UNIFICADO' in df_inadimplencia.columns else 'NOME_VENDEDOR'
+        vendedores_unicos = df_inadimplencia[[base_nomes]].drop_duplicates()
         opcoes_vendedores = ""
         for _, row in vendedores_unicos.iterrows():
-            nome_v = str(row["NOME_VENDEDOR"]) if row["NOME_VENDEDOR"] is not None else ""
+            nome_v = str(row[base_nomes]) if row[base_nomes] is not None else ""
             opcoes_vendedores += f'<option value="{nome_v}">{nome_v}</option>'
         
         # Gerar HTML
@@ -1219,7 +1259,9 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                      const colunas = linha.querySelectorAll('td');
                      if (colunas.length >= 6) {{
                          const nomeVendedor = colunas[2].textContent.trim();
-                         const nomeBase = nomeVendedor.split(' - ').slice(-1)[0].trim();
+                         const nomeBase = nomeVendedor.includes(' - ')
+                             ? nomeVendedor.split(' - ').slice(-1)[0].trim()
+                             : nomeVendedor.trim();
                          const statusLinha = colunas[6].textContent.trim();
                          const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
                          const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
