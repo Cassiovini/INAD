@@ -71,10 +71,14 @@ def obter_dados_inadimplencia():
         hoje = datetime.now()
         dia_atual_menos_1 = hoje - timedelta(days=1)
         
-        # Data início: primeiro dia do mês atual
-        data_inicio = hoje.replace(day=1)
         # Data fim: dia atual menos 1
         data_fim = dia_atual_menos_1
+        # Data início: mesma data (dia e mês) porém 1 ano antes
+        try:
+            data_inicio = data_fim.replace(year=data_fim.year - 1)
+        except ValueError:
+            # Trata 29/02 -> 28/02 do ano anterior
+            data_inicio = (data_fim - timedelta(days=1)).replace(year=(data_fim - timedelta(days=1)).year - 1)
         
         logger.info(f"📅 Buscando dados de inadimplência de {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}")
         
@@ -433,8 +437,11 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
     try:
         hoje = datetime.now()
         dia_atual_menos_1 = hoje - timedelta(days=1)
-        data_inicio = hoje.replace(day=1)
         data_fim = dia_atual_menos_1
+        try:
+            data_inicio = data_fim.replace(year=data_fim.year - 1)
+        except ValueError:
+            data_inicio = (data_fim - timedelta(days=1)).replace(year=(data_fim - timedelta(days=1)).year - 1)
         
         # Calcular totais
         total_valor_inadimplencia = df_inadimplencia['VALOR_TITULO'].sum()
@@ -1112,14 +1119,14 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 
                 // Mostrar informações do filtro ativo
                 let filtrosAtivos = [];
-                if (vendedor) filtrosAtivos.push(`Vendedor: ${vendedor}`);
-                if (status) filtrosAtivos.push(`Status: ${status}`);
-                if (dias) filtrosAtivos.push(`Dias: ${dias}`);
-                if (valor) filtrosAtivos.push(`Valor mínimo: R$ ${parseFloat(valor).toFixed(2)}`);
+                if (vendedor) filtrosAtivos.push(`Vendedor: ${{vendedor}}`);
+                if (status) filtrosAtivos.push(`Status: ${{status}}`);
+                if (dias) filtrosAtivos.push(`Dias: ${{dias}}`);
+                if (valor) filtrosAtivos.push(`Valor mínimo: R$ ${{parseFloat(valor).toFixed(2)}}`);
                 
                 const filtroInfo = document.getElementById('filtro-ativo-info');
                 if (filtrosAtivos.length > 0) {{
-                    filtroInfo.innerHTML = `<div class="filtro-ativo"><strong>Filtros Ativos:</strong> ${filtrosAtivos.join(' | ')}</div>`;
+                    filtroInfo.innerHTML = `<div class="filtro-ativo"><strong>Filtros Ativos:</strong> ${{filtrosAtivos.join(' | ')}}</div>`;
                     filtroInfo.style.display = 'block';
                 }} else {{
                     filtroInfo.style.display = 'none';
