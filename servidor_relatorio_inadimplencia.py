@@ -488,6 +488,33 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     font-size: 1.1em;
                     opacity: 0.9;
                 }}
+                .upload-inline {
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                    align-items: center;
+                    margin-top: 10px;
+                }
+                .upload-inline input[type="file"] {
+                    display: none;
+                }
+                .upload-inline .file-label {
+                    background: #17a2b8;
+                    color: white;
+                    padding: 8px 14px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 600;
+                }
+                .upload-inline .btn-upload {
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 8px 14px;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
                 .periodo {{
                     background-color: #f8f9fa;
                     padding: 15px;
@@ -775,6 +802,13 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 <div class="header">
                     <h1>📊 Relatório de Inadimplência</h1>
                     <p>Análise detalhada de títulos em atraso</p>
+                    <div class="upload-inline">
+                        <form id="uploadFormInline" enctype="multipart/form-data" onsubmit="event.preventDefault(); const fd=new FormData(this); if(!fd.get('arquivo')){alert('Selecione um arquivo.'); return;} fetch('/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ location.reload(); } else { alert('Erro: '+d.error); }}).catch(e=>alert('Erro no upload: '+e));">
+                            <input type="file" id="arquivoInline" name="arquivo" accept=".xlsx,.xls" required>
+                            <label for="arquivoInline" class="file-label">📁 Selecionar Excel</label>
+                            <button type="submit" class="btn-upload">📤 Enviar</button>
+                        </form>
+                    </div>
                 </div>
                 
                 <div class="periodo">
