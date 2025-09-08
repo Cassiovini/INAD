@@ -450,10 +450,12 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
         total_em_aberto = total_valor_inadimplencia - total_valor_pago
         
         # Gerar opções de vendedores para o filtro
-        vendedores_unicos = df_inadimplencia[['COD_VENDEDOR', 'NOME_VENDEDOR']].drop_duplicates()
+        # Unificar por nome do vendedor (um vendedor pode ter 2 RCAs)
+        vendedores_unicos = df_inadimplencia[['NOME_VENDEDOR']].drop_duplicates()
         opcoes_vendedores = ""
         for _, row in vendedores_unicos.iterrows():
-            opcoes_vendedores += f'<option value="{row["COD_VENDEDOR"]}">{row["COD_VENDEDOR"]} - {row["NOME_VENDEDOR"]}</option>'
+            nome_v = str(row["NOME_VENDEDOR"]) if row["NOME_VENDEDOR"] is not None else ""
+            opcoes_vendedores += f'<option value="{nome_v}">{nome_v}</option>'
         
         # Gerar HTML
         html_content = f"""
@@ -845,10 +847,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <label for="filtro-dias">Dias Atraso:</label>
                             <select id="filtro-dias">
                                 <option value="">Todos</option>
-                                <option value="0-10">0-10 dias</option>
-                                <option value="11-30">11-30 dias</option>
-                                <option value="31-60">31-60 dias</option>
-                                <option value="60+">60+ dias</option>
+                                <option value="0-60">0-60 dias</option>
+                                <option value="0-120">0-120 dias</option>
                             </select>
                         </div>
                         <div class="filtro-item">
@@ -1170,14 +1170,14 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 linhas.forEach(linha => {{
                     const colunas = linha.querySelectorAll('td');
                     if (colunas.length >= 8) {{
-                        const codVendedor = colunas[0].textContent.trim();
+                        const nomeVendedorLinha = colunas[1].textContent.trim();
                         const statusLinha = colunas[8].textContent.trim();
                         const diasMedio = parseFloat(colunas[7].textContent.replace(' dias', ''));
                         const valorTotal = parseFloat(colunas[2].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                         
                         let mostrar = true;
                         
-                        if (vendedor && codVendedor !== vendedor) mostrar = false;
+                        if (vendedor && nomeVendedorLinha !== vendedor) mostrar = false;
                         if (status && statusLinha !== status) mostrar = false;
                         if (dias && !filtrarPorDias(diasMedio, dias)) mostrar = false;
                         if (valor && valorTotal < parseFloat(valor)) mostrar = false;
@@ -1195,20 +1195,14 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                      const colunas = linha.querySelectorAll('td');
                      if (colunas.length >= 6) {{
                          const nomeVendedor = colunas[2].textContent.trim();
-                         // Extrair código do vendedor do nome (assumindo formato "Código - Nome")
-                         let codVendedor = '';
-                         if (nomeVendedor.includes(' - ')) {{
-                             codVendedor = nomeVendedor.split(' - ')[0];
-                         }} else {{
-                             codVendedor = nomeVendedor.split(' ')[0];
-                         }}
+                         const nomeBase = nomeVendedor.split(' - ').slice(-1)[0].trim();
                          const statusLinha = colunas[6].textContent.trim();
                          const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
                          const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                          
                          let mostrar = true;
                          
-                         if (vendedor && codVendedor !== vendedor) mostrar = false;
+                         if (vendedor && nomeBase !== vendedor) mostrar = false;
                          if (status && statusLinha !== status) mostrar = false;
                          if (dias && !filtrarPorDias(diasAtraso, dias)) mostrar = false;
                          if (valor && valorTitulo < parseFloat(valor)) mostrar = false;
@@ -1220,10 +1214,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             
             function filtrarPorDias(dias, filtro) {{
                 switch(filtro) {{
-                    case '0-10': return dias >= 0 && dias <= 10;
-                    case '11-30': return dias >= 11 && dias <= 30;
-                    case '31-60': return dias >= 31 && dias <= 60;
-                    case '60+': return dias > 60;
+                    case '0-60': return dias >= 0 && dias <= 60;
+                    case '0-120': return dias >= 0 && dias <= 120;
                     default: return true;
                 }}
             }}
