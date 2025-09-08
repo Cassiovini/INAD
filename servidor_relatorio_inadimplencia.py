@@ -151,6 +151,30 @@ def obter_dados_inadimplencia():
         if 'OBSERVACOES' not in df_inadimplencia.columns:
             df_inadimplencia['OBSERVACOES'] = ''
         
+        # Unificar nomes de vendedores pela BASE_RCA (um vendedor com 2 RCAs)
+        try:
+            df_rca = pd.read_excel(arquivo_excel, sheet_name='BASE_RCA')
+            if 'RCA' in df_rca.columns and 'NOME_RCA' in df_rca.columns:
+                df_rca = df_rca[['RCA', 'NOME_RCA']].copy()
+                df_rca['RCA'] = df_rca['RCA'].astype(str)
+                df_rca['NOME_RCA'] = df_rca['NOME_RCA'].astype(str)
+                mapa_rca_nome = dict(zip(df_rca['RCA'], df_rca['NOME_RCA']))
+            elif 'COD' in df_rca.columns and 'NOME' in df_rca.columns:
+                df_rca = df_rca[['COD', 'NOME']].copy()
+                df_rca['COD'] = df_rca['COD'].astype(str)
+                df_rca['NOME'] = df_rca['NOME'].astype(str)
+                mapa_rca_nome = dict(zip(df_rca['COD'], df_rca['NOME']))
+            else:
+                mapa_rca_nome = {}
+                logger.warning("⚠️ BASE_RCA sem colunas padrão; mantendo nomes originais")
+
+            if mapa_rca_nome:
+                df_inadimplencia['NOME_VENDEDOR'] = df_inadimplencia.apply(
+                    lambda r: mapa_rca_nome.get(str(r['COD_VENDEDOR']), r['NOME_VENDEDOR']), axis=1
+                )
+        except Exception as _:
+            pass
+
         # MOSTRAR INADIMPLÊNCIA GERAL (INCLUINDO VENDEDORES QUE SAÍRAM)
         logger.info(f"📊 Total de registros de inadimplência: {len(df_inadimplencia)}")
         logger.info(f"✅ Dados de inadimplência carregados (incluindo vendedores que saíram)")
