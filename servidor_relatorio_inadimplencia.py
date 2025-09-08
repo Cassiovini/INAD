@@ -228,8 +228,11 @@ def obter_dados_inadimplencia():
 def calcular_metricas_inadimplencia(df_inadimplencia):
     """Calcula métricas de inadimplência"""
     try:
-        # Agrupar por vendedor
-        df_por_vendedor = df_inadimplencia.groupby(['COD_VENDEDOR', 'NOME_VENDEDOR']).agg({
+        # Agrupar por vendedor (usar unificação se existir)
+        chave_cod = 'COD_UNIFICADO' if 'COD_UNIFICADO' in df_inadimplencia.columns else 'COD_VENDEDOR'
+        chave_nome = 'NOME_UNIFICADO' if 'NOME_UNIFICADO' in df_inadimplencia.columns else 'NOME_VENDEDOR'
+
+        df_por_vendedor = df_inadimplencia.groupby([chave_cod, chave_nome]).agg({
             'VALOR_TITULO': ['sum', 'count'],
             'VALOR_PAGO': 'sum',
             'DIAS_ATRASO': 'mean'
@@ -250,6 +253,12 @@ def calcular_metricas_inadimplencia(df_inadimplencia):
         
         logger.info(f"📊 Vendedores ordenados por Dias Médio Atraso (menor para maior)")
         
+        # Renomear chaves para colunas padrão de exibição
+        df_por_vendedor = df_por_vendedor.rename(columns={
+            chave_cod: 'COD_VENDEDOR',
+            chave_nome: 'NOME_VENDEDOR'
+        })
+
         return df_por_vendedor
         
     except Exception as e:
