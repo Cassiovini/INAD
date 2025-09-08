@@ -1046,24 +1046,24 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             
             <script>
             // Upload embutido no cabeçalho (evita f-string dentro do atributo onsubmit)
-            (function(){
+            (function(){{
                 const form = document.getElementById('uploadFormInline');
-                if (form) {
-                    form.addEventListener('submit', function(e) {
+                if (form) {{
+                    form.addEventListener('submit', function(e) {{
                         e.preventDefault();
                         const fileInput = document.getElementById('arquivoInline');
-                        if (!fileInput || fileInput.files.length === 0) {
+                        if (!fileInput || fileInput.files.length === 0) {{
                             alert('Selecione um arquivo.');
                             return;
-                        }
+                        }}
                         const fd = new FormData(form);
-                        fetch('/upload', { method: 'POST', body: fd })
+                        fetch('/upload', {{ method: 'POST', body: fd }})
                             .then(r => r.json())
-                            .then(d => { if (d.success) { location.reload(); } else { alert('Erro: ' + d.error); } })
+                            .then(d => {{ if (d.success) {{ location.reload(); }} else {{ alert('Erro: ' + d.error); }} }})
                             .catch(err => alert('Erro no upload: ' + err));
-                    });
-                }
-            })();
+                    }});
+                }}
+            }})();
             function enviarObservacao(event) {{
                 event.preventDefault();
                 
