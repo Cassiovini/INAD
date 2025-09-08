@@ -488,25 +488,25 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     font-size: 1.1em;
                     opacity: 0.9;
                 }}
-                .upload-inline {
+                .upload-inline {{
                     display: flex;
                     gap: 10px;
                     justify-content: center;
                     align-items: center;
                     margin-top: 10px;
-                }
-                .upload-inline input[type="file"] {
+                }}
+                .upload-inline input[type="file"] {{
                     display: none;
-                }
-                .upload-inline .file-label {
+                }}
+                .upload-inline .file-label {{
                     background: #17a2b8;
                     color: white;
                     padding: 8px 14px;
                     border-radius: 6px;
                     cursor: pointer;
                     font-weight: 600;
-                }
-                .upload-inline .btn-upload {
+                }}
+                .upload-inline .btn-upload {{
                     background: #28a745;
                     color: white;
                     border: none;
@@ -514,7 +514,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     border-radius: 6px;
                     font-weight: 600;
                     cursor: pointer;
-                }
+                }}
                 .periodo {{
                     background-color: #f8f9fa;
                     padding: 15px;
