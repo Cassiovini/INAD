@@ -971,11 +971,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <tr>
                                 <th>Código</th>
                                 <th>Vendedor</th>
-                                <th>Valor Total</th>
-                                <th>Qtd Títulos</th>
-                                <th>Valor Pago</th>
                                 <th>Em Aberto</th>
-                                <th>% Inadimplência</th>
+                                <th>Qtd Títulos</th>
                                 <th>Dias Médio Atraso</th>
                                 <th>Status</th>
                             </tr>
@@ -1001,11 +998,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <tr>
                                 <td>{row['COD_VENDEDOR']}</td>
                                 <td>{row['NOME_VENDEDOR']}</td>
-                                <td>{formatar_valor(row['VALOR_TOTAL_INADIMPLENCIA'])}</td>
-                                <td>{row['QTD_TITULOS']:,}</td>
-                                <td>{formatar_valor(row['VALOR_PAGO'])}</td>
                                 <td>{formatar_valor(row['VALOR_EM_ABERTO'])}</td>
-                                <td>{row['%_INADIMPLENCIA']:.1f}%</td>
+                                <td>{row['QTD_TITULOS']:,}</td>
                                 <td>{row['DIAS_ATRASO_MEDIO']:.0f} dias</td>
                                 <td class="{status_class}">{status_text}</td>
                             </tr>
@@ -1019,7 +1013,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <table id="tabela-detalhamento">
                         <thead>
                             <tr>
-                                <th>Código Cliente</th>
+                                <th>Cód. Vendedor</th>
                                 <th>Nome Cliente</th>
                                 <th>Vendedor</th>
                                 <th>Valor Título</th>
@@ -1047,7 +1041,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             
             html_content += f"""
                             <tr>
-                                <td>{row['COD_CLIENTE']}</td>
+                                <td>{row.get('COD_UNIFICADO', row['COD_VENDEDOR'])}</td>
                                 <td>{row['NOME_CLIENTE']}</td>
                                 <td>{row['NOME_VENDEDOR']}</td>
                                 <td>{formatar_valor(row['VALOR_TITULO'])}</td>
