@@ -648,6 +648,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 }}
                 .tabela-container {{
                     padding: 30px;
+                }}
+                .tabela-scroll {{
                     overflow-x: auto;
                 }}
                 .tabela-container h2 {{
@@ -699,25 +701,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     padding: 20px;
                     font-size: 0.9em;
                 }}
-                .observacoes-section {{
-                    padding: 30px;
-                    background-color: #f8f9fa;
-                    border-top: 1px solid #e9ecef;
-                }}
-                .observacoes-section h3 {{
-                    color: #495057;
-                    margin-bottom: 20px;
-                    font-size: 1.5em;
-                    text-align: center;
-                }}
-                .form-observacao {{
-                    max-width: 600px;
-                    margin: 0 auto;
-                    background: white;
-                    padding: 25px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                }}
+                /* removed bottom observacoes-section styles */
                 .form-group {{
                     margin-bottom: 20px;
                 }}
@@ -754,21 +738,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     transform: translateY(-2px);
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
                 }}
-                .info-observacao {{
-                    background-color: #e3f2fd;
-                    border: 1px solid #2196f3;
-                    border-radius: 6px;
-                    padding: 15px;
-                    margin-bottom: 20px;
-                    color: #1976d2;
-                }}
-                .observacoes-lista {{
-                    margin-top: 30px;
-                    background: white;
-                    padding: 25px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                }}
+                .info-observacao {{ background-color: #e3f2fd; border: 1px solid #2196f3; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #1976d2; }}
+                .observacoes-lista {{ margin-top: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
                 .observacao-item {{
                     border-bottom: 1px solid #e9ecef;
                     padding: 15px 0;
@@ -980,6 +951,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <label for="filtro-dias">Dias Atraso:</label>
                             <select id="filtro-dias">
                                 <option value="">Todos</option>
+                                <option value="0-30">0-30 dias</option>
                                 <option value="0-60">0-60 dias</option>
                                 <option value="0-120">0-120 dias</option>
                             </select>
@@ -1023,6 +995,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 
                 <div class="tabela-container">
                     <h2>📋 Resumo por Vendedor</h2>
+                    <div class="tabela-scroll">
                     <table id="tabela-resumo">
                         <thead>
                             <tr>
@@ -1065,8 +1038,10 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
         html_content += """
                         </tbody>
                     </table>
+                    </div>
                     
                     <h2>📋 Detalhamento por Cliente</h2>
+                    <div class="tabela-scroll">
                     <table id="tabela-detalhamento">
                         <thead>
                             <tr>
@@ -1121,6 +1096,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
         html_content += f"""
                         </tbody>
                     </table>
+                    </div>
                 </div>
                 
                 <!-- Modal de Observações por Cliente -->
@@ -1150,62 +1126,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     </div>
                 </div>
                 
-                <div class="observacoes-section">
-                    <h3>📝 Adicionar Observação</h3>
-                    <div class="form-observacao">
-                        <div class="info-observacao">
-                            <strong>💡 Como usar:</strong> Preencha os campos abaixo para adicionar observações sobre sua inadimplência. 
-                            Suas observações serão enviadas para a gestão e podem ajudar no acompanhamento dos casos.
-                        </div>
-                        
-                        <form id="formObservacao" onsubmit="enviarObservacao(event)">
-                            <div class="form-group">
-                                <label for="nome_vendedor">Nome do Vendedor:</label>
-                                <input type="text" id="nome_vendedor" name="nome_vendedor" placeholder="Digite seu nome completo" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="codigo_vendedor">Código do Cliente:</label>
-                                <input type="text" id="codigo_vendedor" name="codigo_vendedor" placeholder="Ex: 12345" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="observacao">Observação:</label>
-                                <textarea id="observacao" name="observacao" placeholder="Descreva aqui suas observações sobre a inadimplência, ações tomadas, previsões de pagamento, etc..." required></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="data_observacao">Data da Observação:</label>
-                                <input type="date" id="data_observacao" name="data_observacao" value="{hoje.strftime('%Y-%m-%d')}" required>
-                            </div>
-                            
-                            <button type="submit" class="btn-enviar">📤 Enviar Observação</button>
-                        </form>
-                    </div>
-                    
-                    <div class="observacoes-lista">
-                        <h3>📋 Observações Registradas</h3>
-                        <button class="btn-atualizar" onclick="atualizarObservacoes()">🔄 Atualizar Lista</button>
-                        <div id="lista-observacoes">
-        """
-        
-        # Adicionar observações existentes
-        for obs in reversed(observacoes):  # Mais recentes primeiro
-            data_obs = datetime.fromisoformat(obs['data_envio']).strftime('%d/%m/%Y às %H:%M')
-            html_content += f"""
-                            <div class="observacao-item">
-                                <div class="observacao-header">
-                                    <span class="observacao-vendedor">{obs['nome_vendedor']} (Código: {obs['codigo_vendedor']})</span>
-                                    <span class="observacao-data">{data_obs}</span>
-                                </div>
-                                <div class="observacao-texto">{obs['observacao']}</div>
-                            </div>
-            """
-        
-        html_content += f"""
-                        </div>
-                    </div>
-                </div>
+                <!-- Removida seção de observações no rodapé -->
                 
                 <div class="footer">
                     <p>Relatório gerado em {hoje.strftime('%d/%m/%Y às %H:%M')}</p>
@@ -1412,16 +1333,14 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 
                 linhas.forEach(linha => {{
                     const colunas = linha.querySelectorAll('td');
-                    if (colunas.length >= 8) {{
+                    if (colunas.length >= 6) {{
                         const nomeVendedorLinha = colunas[1].textContent.trim();
-                        const statusLinha = colunas[8].textContent.trim();
-                        const diasMedio = parseFloat(colunas[7].textContent.replace(' dias', ''));
+                        const diasMedio = parseFloat(colunas[4].textContent.replace(' dias', ''));
                         const valorTotal = parseFloat(colunas[2].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                         
                         let mostrar = true;
                         
                         if (vendedor && nomeVendedorLinha !== vendedor) mostrar = false;
-                        if (status && statusLinha !== status) mostrar = false;
                         if (dias && !filtrarPorDias(diasMedio, dias)) mostrar = false;
                         if (valor && valorTotal < parseFloat(valor)) mostrar = false;
                         
@@ -1459,6 +1378,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             
             function filtrarPorDias(dias, filtro) {{
                 switch(filtro) {{
+                    case '0-30': return dias >= 0 && dias <= 30;
                     case '0-60': return dias >= 0 && dias <= 60;
                     case '0-120': return dias >= 0 && dias <= 120;
                     default: return true;
