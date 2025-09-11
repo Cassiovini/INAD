@@ -85,18 +85,21 @@ def obter_dados_inadimplencia():
         # Verificar se o arquivo existe (primeiro na pasta uploads, depois no diretório raiz)
         arquivo_excel = None
         
-        # Procurar na pasta uploads
+        # Procurar na pasta uploads (novo nome preferencial)
         for filename in os.listdir(UPLOAD_FOLDER):
-            if allowed_file(filename) and 'RESUMO_VENDAS' in filename.upper():
+            name_upper = filename.upper()
+            if allowed_file(filename) and ('INADIMPLENCIA GERAL' in name_upper or 'RESUMO_VENDAS' in name_upper):
                 arquivo_excel = os.path.join(UPLOAD_FOLDER, filename)
                 break
         
         # Se não encontrou na pasta uploads, procurar no diretório raiz
         if not arquivo_excel:
-            if os.path.exists("RESUMO_VENDAS.xlsx"):
+            if os.path.exists("INADIMPLENCIA GERAL.xlsx"):
+                arquivo_excel = "INADIMPLENCIA GERAL.xlsx"
+            elif os.path.exists("RESUMO_VENDAS.xlsx"):
                 arquivo_excel = "RESUMO_VENDAS.xlsx"
             else:
-                logger.error(f"❌ Arquivo RESUMO_VENDAS.xlsx não encontrado")
+                logger.error(f"❌ Arquivo INADIMPLENCIA GERAL.xlsx não encontrado")
                 logger.info("💡 Faça upload do arquivo Excel na página inicial")
                 return None
         
@@ -1538,7 +1541,7 @@ def upload_arquivo():
         
         if arquivo and allowed_file(arquivo.filename):
             # Salvar arquivo
-            filename = "RESUMO_VENDAS.xlsx"
+            filename = "INADIMPLENCIA GERAL.xlsx"
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             arquivo.save(filepath)
             
