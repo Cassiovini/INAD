@@ -429,6 +429,75 @@ def get_db_connection():
     except Exception as _:
         return None
 
+def migrate_json_to_db_if_needed():
+    """Migra automaticamente o JSON de observações para Postgres, uma única vez.
+    Regra: se a tabela existir e tiver registros, não migra. Se vazia e JSON existir, insere todos.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return
+        with conn.cursor() as cur:
+            # Garantir tabela
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS observacoes (
+                    id SERIAL PRIMARY KEY,
+                    nome_vendedor TEXT NOT NULL,
+                    codigo_vendedor TEXT NOT NULL,
+                    observacao TEXT NOT NULL,
+                    data_observacao DATE NOT NULL,
+                    data_envio TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+            conn.commit()
+            # Verificar se já possui dados
+            cur.execute("SELECT COUNT(1) FROM observacoes")
+            qtd = cur.fetchone()[0]
+            if qtd and int(qtd) > 0:
+                conn.close()
+                return
+            # Carregar JSON se existir
+            if not os.path.exists(OBSERVACOES_FILE):
+                conn.close()
+                return
+            with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
+                dados = json.load(f)
+            if not isinstance(dados, list) or len(dados) == 0:
+                conn.close()
+                return
+            # Inserir em batch
+            inseridos = 0
+            for obs in dados:
+                try:
+                    nome = str(obs.get('nome_vendedor', '')).strip()
+                    cod = str(obs.get('codigo_vendedor', '')).strip()
+                    texto = str(obs.get('observacao', '')).strip()
+                    data_obs = obs.get('data_observacao') or ''
+                    if not data_obs:
+                        # Extrair só a data de data_envio, se existir
+                        de = str(obs.get('data_envio', '')).strip()
+                        data_obs = de.split('T')[0][:10] if de else datetime.now().strftime('%Y-%m-%d')
+                    if not nome or not cod or not texto:
+                        continue
+                    cur.execute(
+                        """
+                        INSERT INTO observacoes (nome_vendedor, codigo_vendedor, observacao, data_observacao)
+                        VALUES (%s, %s, %s, %s)
+                        """,
+                        (nome, cod, texto, data_obs)
+                    )
+                    inseridos += 1
+                except Exception:
+                    continue
+            conn.commit()
+            conn.close()
+            if inseridos > 0:
+                logger.info(f"✅ Migração JSON->DB concluída: {inseridos} observações migradas")
+    except Exception as e:
+        logger.warning(f"⚠️ Falha na migração automática JSON->DB: {e}")
+
 def gerar_pagina_upload():
     """Gera página de upload quando não há dados"""
     html_content = """
@@ -1721,6 +1790,12 @@ if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5000))
     
+    # Tentar migrar observações do JSON para Postgres ao iniciar
+    try:
+        migrate_json_to_db_if_needed()
+    except Exception as _:
+        pass
+
     if os.environ.get('RENDER'):  # Está no Render
         print("🌐 Modo Produção - Render.com")
         app.run(host='0.0.0.0', port=port, debug=False)
