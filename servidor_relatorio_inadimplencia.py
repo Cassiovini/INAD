@@ -1098,10 +1098,11 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 status_class = "status-ruim"
                 status_text = "RUIM"
             
+            nome_vendedor_resumo = row['NOME_VENDEDOR']
             html_content += f"""
                             <tr>
                                 <td>{row['COD_VENDEDOR']}</td>
-                                <td>{row['NOME_VENDEDOR']}</td>
+                                <td>{nome_vendedor_resumo}</td>
                                 <td>{formatar_valor(row['VALOR_EM_ABERTO'])}</td>
                                 <td>{row['QTD_TITULOS']:,}</td>
                                 <td>{row['DIAS_ATRASO_MEDIO']:.0f} dias</td>
@@ -1148,11 +1149,12 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             nome_cliente_js = str(row['NOME_CLIENTE']).replace("'", "\\'")
             obs_count = obs_por_cliente.get(cod_cliente, 0)
             badge_str = f"<span id=\"obs-badge-{cod_cliente}\" class=\"obs-badge\">{obs_count}</span>" if obs_count > 0 else f"<span id=\"obs-badge-{cod_cliente}\" class=\"obs-badge\" style=\"display:none;\"></span>"
+            nome_vendedor_detalhe = row['NOME_UNIFICADO'] if 'NOME_UNIFICADO' in df_inadimplencia.columns else row['NOME_VENDEDOR']
             html_content += f"""
                             <tr>
                                 <td>{row['COD_CLIENTE']}</td>
                                 <td>{row['NOME_CLIENTE']}</td>
-                                <td>{row['NOME_VENDEDOR']}</td>
+                                <td>{nome_vendedor_detalhe}</td>
                                 <td><strong>{formatar_valor(row['VALOR_TITULO'])}</strong></td>
                                 <td>{row['DATA_VENCIMENTO']}</td>
                                 <td><strong>{row['DIAS_ATRASO']} dias</strong></td>
