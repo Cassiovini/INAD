@@ -581,6 +581,12 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     font-size: 1.1em;
                     opacity: 0.9;
                 }}
+                .clock {{
+                    margin-top: 8px;
+                    color: #ffffff;
+                    font-weight: 600;
+                    text-align: center;
+                }}
                 .upload-inline {{
                     display: flex;
                     gap: 10px;
@@ -922,6 +928,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <button type="submit" class="btn-upload">📤 Enviar</button>
                         </form>
                     </div>
+                    <div id="keepaliveClock" class="clock">--:--:--</div>
                 </div>
                 
                 <div class="periodo">
@@ -1052,8 +1059,6 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <th>Data Vencimento</th>
                                 <th>Dias Atraso</th>
                                 <th>Status</th>
-                                <th>Valor Pago</th>
-                                <th>Data Pagamento</th>
                                 <th>Obs</th>
                             </tr>
                         </thead>
@@ -1081,12 +1086,10 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <td>{row['COD_CLIENTE']}</td>
                                 <td>{row['NOME_CLIENTE']}</td>
                                 <td>{row['NOME_VENDEDOR']}</td>
-                                <td>{formatar_valor(row['VALOR_TITULO'])}</td>
+                                <td><strong>{formatar_valor(row['VALOR_TITULO'])}</strong></td>
                                 <td>{row['DATA_VENCIMENTO']}</td>
-                                <td>{row['DIAS_ATRASO']} dias</td>
+                                <td><strong>{row['DIAS_ATRASO']} dias</strong></td>
                                 <td class="{status_class}">{status_titulo}</td>
-                                <td>{formatar_valor(row['VALOR_PAGO'])}</td>
-                                <td>{row['DATA_PAGAMENTO'] if pd.notna(row['DATA_PAGAMENTO']) else '-'}</td>
                                 <td>
                                     <button class="btn-obs" onclick="openObsModal('{cod_cliente}', '{nome_cliente_js}')">📝 Obs {badge_str}</button>
                                 </td>
@@ -1349,19 +1352,19 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 }});
             }}
             
-                         function filtrarTabelaDetalhamento(vendedor, status, dias, valor) {{
+                         function filtrarTabelaDetalhamento(vendedor, status, dias, valor) {
                  const tabelaDetalhamento = document.getElementById('tabela-detalhamento');
                  const linhas = tabelaDetalhamento.querySelectorAll('tbody tr');
                  
-                 linhas.forEach(linha => {{
+                 linhas.forEach(linha => {
                      const colunas = linha.querySelectorAll('td');
-                     if (colunas.length >= 6) {{
+                     if (colunas.length >= 6) {
                          const nomeVendedor = colunas[2].textContent.trim();
                          const nomeBase = nomeVendedor.includes(' - ')
                              ? nomeVendedor.split(' - ').slice(-1)[0].trim()
                              : nomeVendedor.trim();
-                         const statusLinha = colunas[6].textContent.trim();
-                         const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
+                         const statusLinha = colunas[5].textContent.trim();
+                         const diasAtraso = parseFloat(colunas[4].textContent.replace(' dias', ''));
                          const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                          
                          let mostrar = true;
@@ -1372,9 +1375,9 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                          if (valor && valorTitulo < parseFloat(valor)) mostrar = false;
                          
                          linha.style.display = mostrar ? '' : 'none';
-                     }}
-                 }});
-             }}
+                     }
+                 });
+              }
             
             function filtrarPorDias(dias, filtro) {{
                 switch(filtro) {{
@@ -1390,10 +1393,24 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 const urlParams = new URLSearchParams(window.location.search);
                 const vendedor = urlParams.get('vendedor');
                 if (vendedor) {{
-                    document.getElementById('codigo_vendedor').value = vendedor;
+                    const codigoVEl = document.getElementById('codigo_vendedor');
+                    if (codigoVEl) {{ codigoVEl.value = vendedor; }}
                     document.getElementById('filtro-vendedor').value = vendedor;
                     aplicarFiltros(); // Aplicar filtro automaticamente
                 }}
+                // Relógio e keepalive
+                function updateClock() {{
+                    const el = document.getElementById('keepaliveClock');
+                    if (!el) return;
+                    const now = new Date();
+                    const hh = String(now.getHours()).padStart(2,'0');
+                    const mm = String(now.getMinutes()).padStart(2,'0');
+                    const ss = String(now.getSeconds()).padStart(2,'0');
+                    el.textContent = `${hh}:${mm}:${ss}`;
+                }}
+                setInterval(updateClock, 1000);
+                updateClock();
+                setInterval(() => {{ fetch('/ping').catch(()=>{{}}); }}, 30000);
             }};
             </script>
         </body>
@@ -1479,6 +1496,14 @@ def observacoes_por_cliente(codigo):
     except Exception as e:
         logger.error(f"❌ Erro ao listar observações do cliente {codigo}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/ping')
+def ping():
+    """Rota de keepalive para evitar inatividade no Render"""
+    try:
+        return jsonify({'ok': True, 'ts': datetime.now().isoformat()}), 200
+    except Exception:
+        return jsonify({'ok': False}), 200
 
 @app.route('/upload', methods=['POST'])
 def upload_arquivo():
