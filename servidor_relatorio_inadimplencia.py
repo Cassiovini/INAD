@@ -4,6 +4,8 @@ import logging
 import json
 from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify, redirect, url_for, send_file
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import threading
 import webbrowser
 
@@ -333,32 +335,99 @@ def calcular_metricas_inadimplencia(df_inadimplencia):
         return None
 
 def carregar_observacoes():
-    """Carrega observações salvas"""
+    """Carrega observações salvas do Postgres (fallback JSON)."""
+    # Tenta DB primeiro
+    try:
+        conn = get_db_connection()
+        if conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS observacoes (
+                        id SERIAL PRIMARY KEY,
+                        nome_vendedor TEXT NOT NULL,
+                        codigo_vendedor TEXT NOT NULL,
+                        observacao TEXT NOT NULL,
+                        data_observacao DATE NOT NULL,
+                        data_envio TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """)
+                conn.commit()
+                cur.execute("SELECT id, nome_vendedor, codigo_vendedor, observacao, data_observacao, data_envio FROM observacoes ORDER BY id ASC")
+                rows = cur.fetchall()
+                conn.close()
+                return list(rows)
+    except Exception as e:
+        logger.warning(f"⚠️ DB indisponível ao carregar observações: {e}")
+    # Fallback JSON
     try:
         if os.path.exists(OBSERVACOES_FILE):
             with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        return []
     except Exception as e:
-        logger.error(f"❌ Erro ao carregar observações: {e}")
-        return []
+        logger.error(f"❌ Erro ao carregar observações (JSON): {e}")
+    return []
 
 def salvar_observacao(observacao):
-    """Salva uma nova observação"""
+    """Salva uma nova observação no Postgres (fallback JSON)."""
+    # Tenta DB
+    try:
+        conn = get_db_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS observacoes (
+                        id SERIAL PRIMARY KEY,
+                        nome_vendedor TEXT NOT NULL,
+                        codigo_vendedor TEXT NOT NULL,
+                        observacao TEXT NOT NULL,
+                        data_observacao DATE NOT NULL,
+                        data_envio TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                    """
+                )
+                cur.execute(
+                    """
+                    INSERT INTO observacoes (nome_vendedor, codigo_vendedor, observacao, data_observacao)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (
+                        observacao['nome_vendedor'],
+                        str(observacao['codigo_vendedor']),
+                        observacao['observacao'],
+                        observacao['data_observacao']
+                    )
+                )
+                conn.commit()
+                conn.close()
+                logger.info(f"✅ Observação salva (DB): {observacao['nome_vendedor']}")
+                return True
+    except Exception as e:
+        logger.warning(f"⚠️ DB indisponível ao salvar observação: {e}")
+    # Fallback JSON
     try:
         observacoes = carregar_observacoes()
         observacao['id'] = len(observacoes) + 1
         observacao['data_envio'] = datetime.now().isoformat()
         observacoes.append(observacao)
-        
         with open(OBSERVACOES_FILE, 'w', encoding='utf-8') as f:
             json.dump(observacoes, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"✅ Observação salva: {observacao['nome_vendedor']}")
+        logger.info(f"✅ Observação salva (JSON): {observacao['nome_vendedor']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Erro ao salvar observação: {e}")
+        logger.error(f"❌ Erro ao salvar observação (JSON): {e}")
         return False
+
+def get_db_connection():
+    """Abre conexão com Postgres via DATABASE_URL (Neon)."""
+    try:
+        db_url = os.environ.get('DATABASE_URL')
+        if not db_url:
+            return None
+        conn = psycopg2.connect(db_url)
+        return conn
+    except Exception as _:
+        return None
 
 def gerar_pagina_upload():
     """Gera página de upload quando não há dados"""
