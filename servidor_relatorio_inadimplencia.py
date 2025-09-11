@@ -1406,7 +1406,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     const hh = String(now.getHours()).padStart(2,'0');
                     const mm = String(now.getMinutes()).padStart(2,'0');
                     const ss = String(now.getSeconds()).padStart(2,'0');
-                    el.textContent = `${hh}:${mm}:${ss}`;
+                    el.textContent = hh + ':' + mm + ':' + ss;
                 }}
                 setInterval(updateClock, 1000);
                 updateClock();
