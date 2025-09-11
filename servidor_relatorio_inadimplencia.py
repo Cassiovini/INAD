@@ -1286,7 +1286,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 document.getElementById('obsModal').style.display = 'none';
             }}
             function carregarObsDoCliente(codigo) {{
-                fetch(`/observacoes_por_cliente/${encodeURIComponent(codigo)}`)
+                fetch(`/observacoes_por_cliente/${{encodeURIComponent(codigo)}}`)
                     .then(r => r.json())
                     .then(data => {{
                         const listaDiv = document.getElementById('obsLista');
@@ -1341,7 +1341,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 .catch(err => alert('❌ Erro ao salvar observação: ' + err));
             }}
             function atualizarBadge(codigo, count) {{
-                const badge = document.getElementById(`obs-badge-${codigo}`);
+                const badge = document.getElementById(`obs-badge-${{codigo}}`);
                 if (!badge) return;
                 const n = Number(count || 0);
                 if (n > 0) {{
