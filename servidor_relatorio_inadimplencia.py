@@ -1025,6 +1025,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             <label for="filtro-dias">Dias Atraso:</label>
                             <select id="filtro-dias">
                                 <option value="">Todos</option>
+                                <option value="0-5">0-5 dias</option>
+                                <option value="0-15">0-15 dias</option>
                                 <option value="0-30">0-30 dias</option>
                                 <option value="0-60">0-60 dias</option>
                                 <option value="0-120">0-120 dias</option>
@@ -1433,7 +1435,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                             ? nomeVendedor.split(' - ').slice(-1)[0].trim()
                             : nomeVendedor.trim();
                         const statusLinha = colunas[5].textContent.trim();
-                        const diasAtraso = parseFloat(colunas[4].textContent.replace(' dias', ''));
+                        // Índices atualizados: Valor Título(3), Data(4), Dias(5) -> após remoção de colunas, Dias está em 5? Não; atual: [0..7]: 0 cod,1 nome,2 vend,3 valor,4 venc,5 dias,6 status,7 obs
+                        const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
                         const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                         
                         let mostrar = true;
@@ -1450,6 +1453,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             
             function filtrarPorDias(dias, filtro) {{
                 switch(filtro) {{
+                    case '0-5': return dias >= 0 && dias <= 5;
+                    case '0-15': return dias >= 0 && dias <= 15;
                     case '0-30': return dias >= 0 && dias <= 30;
                     case '0-60': return dias >= 0 && dias <= 60;
                     case '0-120': return dias >= 0 && dias <= 120;
