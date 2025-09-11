@@ -1352,32 +1352,32 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 }});
             }}
             
-                         function filtrarTabelaDetalhamento(vendedor, status, dias, valor) {
-                 const tabelaDetalhamento = document.getElementById('tabela-detalhamento');
-                 const linhas = tabelaDetalhamento.querySelectorAll('tbody tr');
-                 
-                 linhas.forEach(linha => {
-                     const colunas = linha.querySelectorAll('td');
-                     if (colunas.length >= 6) {
-                         const nomeVendedor = colunas[2].textContent.trim();
-                         const nomeBase = nomeVendedor.includes(' - ')
-                             ? nomeVendedor.split(' - ').slice(-1)[0].trim()
-                             : nomeVendedor.trim();
-                         const statusLinha = colunas[5].textContent.trim();
-                         const diasAtraso = parseFloat(colunas[4].textContent.replace(' dias', ''));
-                         const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
-                         
-                         let mostrar = true;
-                         
-                         if (vendedor && nomeBase !== vendedor) mostrar = false;
-                         if (status && statusLinha !== status) mostrar = false;
-                         if (dias && !filtrarPorDias(diasAtraso, dias)) mostrar = false;
-                         if (valor && valorTitulo < parseFloat(valor)) mostrar = false;
-                         
-                         linha.style.display = mostrar ? '' : 'none';
-                     }
-                 });
-              }
+                         function filtrarTabelaDetalhamento(vendedor, status, dias, valor) {{
+                const tabelaDetalhamento = document.getElementById('tabela-detalhamento');
+                const linhas = tabelaDetalhamento.querySelectorAll('tbody tr');
+                
+                linhas.forEach(linha => {{
+                    const colunas = linha.querySelectorAll('td');
+                    if (colunas.length >= 6) {{
+                        const nomeVendedor = colunas[2].textContent.trim();
+                        const nomeBase = nomeVendedor.includes(' - ')
+                            ? nomeVendedor.split(' - ').slice(-1)[0].trim()
+                            : nomeVendedor.trim();
+                        const statusLinha = colunas[5].textContent.trim();
+                        const diasAtraso = parseFloat(colunas[4].textContent.replace(' dias', ''));
+                        const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
+                        
+                        let mostrar = true;
+                        
+                        if (vendedor && nomeBase !== vendedor) mostrar = false;
+                        if (status && statusLinha !== status) mostrar = false;
+                        if (dias && !filtrarPorDias(diasAtraso, dias)) mostrar = false;
+                        if (valor && valorTitulo < parseFloat(valor)) mostrar = false;
+                        
+                        linha.style.display = mostrar ? '' : 'none';
+                    }}
+                }});
+             }}
             
             function filtrarPorDias(dias, filtro) {{
                 switch(filtro) {{
