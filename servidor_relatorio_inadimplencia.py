@@ -530,6 +530,17 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             nome_v = str(row[base_nomes]) if row[base_nomes] is not None else ""
             opcoes_vendedores += f'<option value="{nome_v}">{nome_v}</option>'
         
+        # Mapa de quantidade de observações por cliente (para indicador na tabela)
+        obs_por_cliente = {}
+        try:
+            for o in (observacoes or []):
+                cod = str(o.get('codigo_vendedor', '')).strip()
+                if not cod:
+                    continue
+                obs_por_cliente[cod] = obs_por_cliente.get(cod, 0) + 1
+        except Exception:
+            obs_por_cliente = {}
+        
         # Gerar HTML
         html_content = f"""
         <!DOCTYPE html>
@@ -791,6 +802,52 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     cursor: pointer;
                     margin-bottom: 20px;
                 }}
+                .btn-obs {{
+                    background: #17a2b8;
+                    color: white;
+                    border: none;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-weight: 600;
+                }}
+                .obs-badge {{
+                    background: #ffc107;
+                    color: #212529;
+                    border-radius: 10px;
+                    padding: 2px 6px;
+                    font-size: 0.8em;
+                    margin-left: 6px;
+                    display: inline-block;
+                }}
+                .modal {{
+                    position: fixed;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.4);
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                }}
+                .modal-content {{
+                    background: #ffffff;
+                    max-width: 700px;
+                    width: 90%;
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                }}
+                .modal-close {{
+                    float: right;
+                    cursor: pointer;
+                    font-size: 24px;
+                    line-height: 1;
+                }}
                 .filtros-section {{
                     padding: 20px;
                     background-color: #f8f9fa;
@@ -1022,6 +1079,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <th>Status</th>
                                 <th>Valor Pago</th>
                                 <th>Data Pagamento</th>
+                                <th>Obs</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1039,6 +1097,10 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 status_titulo = "PAGO PARCIAL"
                 status_class = "status-medio"
             
+            cod_cliente = str(row['COD_CLIENTE'])
+            nome_cliente_js = str(row['NOME_CLIENTE']).replace("'", "\\'")
+            obs_count = obs_por_cliente.get(cod_cliente, 0)
+            badge_str = f"<span id=\"obs-badge-{cod_cliente}\" class=\"obs-badge\">{obs_count}</span>" if obs_count > 0 else f"<span id=\"obs-badge-{cod_cliente}\" class=\"obs-badge\" style=\"display:none;\"></span>"
             html_content += f"""
                             <tr>
                                 <td>{row['COD_CLIENTE']}</td>
@@ -1050,12 +1112,42 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <td class="{status_class}">{status_titulo}</td>
                                 <td>{formatar_valor(row['VALOR_PAGO'])}</td>
                                 <td>{row['DATA_PAGAMENTO'] if pd.notna(row['DATA_PAGAMENTO']) else '-'}</td>
+                                <td>
+                                    <button class="btn-obs" onclick="openObsModal('{cod_cliente}', '{nome_cliente_js}')">📝 Obs {badge_str}</button>
+                                </td>
                             </tr>
             """
         
         html_content += f"""
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Modal de Observações por Cliente -->
+                <div id="obsModal" class="modal">
+                    <div class="modal-content">
+                        <span class="modal-close" onclick="closeObsModal()">&times;</span>
+                        <h3>📝 Observações do Cliente <span id="obsClienteNome"></span> (<span id="obsClienteCodigo"></span>)</h3>
+                        <div id="obsLista" class="observacoes-lista" style="margin-top: 10px;"></div>
+                        <div class="form-observacao" style="margin-top: 20px;">
+                            <form id="obsForm" onsubmit="salvarObsDoCliente(event)">
+                                <input type="hidden" id="obsCodigoCliente" name="codigo_vendedor">
+                                <div class="form-group">
+                                    <label for="obsNomeVendedor">Nome do Vendedor:</label>
+                                    <input type="text" id="obsNomeVendedor" name="nome_vendedor" placeholder="Digite seu nome completo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="obsTexto">Observação:</label>
+                                    <textarea id="obsTexto" name="observacao" placeholder="Descreva sua observação..." required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="obsData">Data da Observação:</label>
+                                    <input type="date" id="obsData" name="data_observacao" value="{hoje.strftime('%Y-%m-%d')}" required>
+                                </div>
+                                <button type="submit" class="btn-enviar">Salvar Observação</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="observacoes-section">
@@ -1180,6 +1272,87 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 location.reload();
             }}
             
+            // ---- Observações por Cliente (modal) ----
+            let obsModalCodigoAtual = null;
+            function openObsModal(codigo, nome) {{
+                obsModalCodigoAtual = String(codigo);
+                document.getElementById('obsClienteCodigo').textContent = obsModalCodigoAtual;
+                document.getElementById('obsClienteNome').textContent = nome;
+                document.getElementById('obsCodigoCliente').value = obsModalCodigoAtual;
+                document.getElementById('obsModal').style.display = 'flex';
+                carregarObsDoCliente(obsModalCodigoAtual);
+            }}
+            function closeObsModal() {{
+                document.getElementById('obsModal').style.display = 'none';
+            }}
+            function carregarObsDoCliente(codigo) {{
+                fetch(`/observacoes_por_cliente/${encodeURIComponent(codigo)}`)
+                    .then(r => r.json())
+                    .then(data => {{
+                        const listaDiv = document.getElementById('obsLista');
+                        if (!data.success) {{
+                            listaDiv.innerHTML = '<div class="info-observacao">Erro ao carregar observações.</div>';
+                            return;
+                        }}
+                        const obs = data.observacoes || [];
+                        if (obs.length === 0) {{
+                            listaDiv.innerHTML = '<div class="info-observacao">Nenhuma observação para este cliente.</div>';
+                        }} else {{
+                            listaDiv.innerHTML = obs.slice().reverse().map(o => {{
+                                let d = o.data_envio || o.data_observacao;
+                                try {{ d = new Date(d).toLocaleString('pt-BR'); }} catch (e) {{}}
+                                return `<div class="observacao-item">`
+                                    + `<div class=\"observacao-header\">`
+                                    + `<span class=\"observacao-vendedor\">${{o.nome_vendedor || '-'}}` + `</span>`
+                                    + `<span class=\"observacao-data\">${{d || ''}}</span>`
+                                    + `</div>`
+                                    + `<div class=\"observacao-texto\">${{o.observacao || ''}}</div>`
+                                    + `</div>`;
+                            }}).join('');
+                        }}
+                        atualizarBadge(codigo, obs.length);
+                    }})
+                    .catch(_ => {{
+                        document.getElementById('obsLista').innerHTML = '<div class="info-observacao">Erro ao carregar observações.</div>';
+                    }});
+            }}
+            function salvarObsDoCliente(event) {{
+                event.preventDefault();
+                const dados = {{
+                    nome_vendedor: document.getElementById('obsNomeVendedor').value,
+                    codigo_vendedor: document.getElementById('obsCodigoCliente').value,
+                    observacao: document.getElementById('obsTexto').value,
+                    data_observacao: document.getElementById('obsData').value
+                }};
+                fetch('/salvar_observacao', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(dados)
+                }})
+                .then(r => r.json())
+                .then(d => {{
+                    if (d.success) {{
+                        document.getElementById('obsTexto').value = '';
+                        carregarObsDoCliente(obsModalCodigoAtual);
+                    }} else {{
+                        alert('❌ Erro ao salvar observação: ' + (d.error || ''));
+                    }}
+                }})
+                .catch(err => alert('❌ Erro ao salvar observação: ' + err));
+            }}
+            function atualizarBadge(codigo, count) {{
+                const badge = document.getElementById(`obs-badge-${codigo}`);
+                if (!badge) return;
+                const n = Number(count || 0);
+                if (n > 0) {{
+                    badge.textContent = n;
+                    badge.style.display = 'inline-block';
+                }} else {{
+                    badge.style.display = 'none';
+                }}
+            }}
+            // ---- fim observações por cliente ----
+
             // Funções de filtro
             function aplicarFiltros() {{
                 const vendedor = document.getElementById('filtro-vendedor').value;
@@ -1375,6 +1548,17 @@ def listar_observacoes():
     except Exception as e:
         logger.error(f"❌ Erro ao listar observações: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/observacoes_por_cliente/<codigo>')
+def observacoes_por_cliente(codigo):
+    """Retorna observações filtradas por código de cliente"""
+    try:
+        codigo = str(codigo)
+        obs = [o for o in carregar_observacoes() if str(o.get('codigo_vendedor', '')) == codigo]
+        return jsonify({'success': True, 'observacoes': obs})
+    except Exception as e:
+        logger.error(f"❌ Erro ao listar observações do cliente {codigo}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_arquivo():
