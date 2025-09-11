@@ -176,42 +176,62 @@ def obter_dados_inadimplencia():
             pass
 
         # ================================
-        # Unificação por BASE_RCA (MESMO COD / MESMO VEND)
+        # Unificação por BASE_RCA (um vendedor com 2 RCAs)
         # ================================
         try:
             df_rca = pd.read_excel(arquivo_excel, sheet_name='BASE_RCA')
-            cols = {c.upper(): c for c in df_rca.columns}
-            # Normalizar nomes de colunas para lookup
-            tem_rca = 'RCA' in cols or 'COD' in cols
-            col_rca = cols.get('RCA', cols.get('COD'))
-            col_nome = cols.get('NOME_RCA', cols.get('NOME'))
-            col_mesmo_cod = cols.get('MESMO COD') or cols.get('MESMO_COD')
-            col_mesmo_vend = cols.get('MESMO VEND') or cols.get('MESMO_VEND')
+            # Mapear nomes das colunas com heurística (tolerante a variações)
+            colmap = {}
+            for c in df_rca.columns:
+                cu = str(c).strip().upper().replace('.', '').replace('-', ' ').replace('  ', ' ')
+                colmap[cu] = c
+            def find_col(*cands):
+                for cand in cands:
+                    if cand in colmap:
+                        return colmap[cand]
+                # busca por contém
+                for cu, orig in colmap.items():
+                    if all(x in cu for x in cands):
+                        return orig
+                return None
+
+            col_rca = find_col('RCA') or find_col('COD') or find_col('CODIGO')
+            col_nome = find_col('NOME RCA') or find_col('NOME')
+            col_mesmo_cod = (find_col('MESMO COD') or find_col('MESMO_COD') or find_col('MESMO CODIGO')
+                             or find_col('CODIGO UNIFICADO') or find_col('COD UNIFICADO'))
+            col_mesmo_vend = (find_col('MESMO VEND') or find_col('MESMO_VEND') or find_col('MESMO VENDEDOR')
+                              or find_col('NOME UNIFICADO') or find_col('VENDEDOR UNIFICADO'))
 
             mapa_rca_para_nome = {}
             mapa_rca_para_cod = {}
-            if tem_rca and (col_mesmo_vend or col_nome):
-                # Base de mapeamento preferencial: MESMO VEND / MESMO COD
-                if col_mesmo_vend and col_mesmo_cod:
-                    tmp = df_rca[[col_rca, col_mesmo_cod, col_mesmo_vend]].copy()
-                    tmp[col_rca] = tmp[col_rca].astype(str)
-                    tmp[col_mesmo_cod] = tmp[col_mesmo_cod].astype(str)
-                    tmp[col_mesmo_vend] = tmp[col_mesmo_vend].astype(str)
-                    mapa_rca_para_nome = dict(zip(tmp[col_rca], tmp[col_mesmo_vend]))
-                    mapa_rca_para_cod = dict(zip(tmp[col_rca], tmp[col_mesmo_cod]))
-                else:
-                    tmp = df_rca[[col_rca, col_nome]].copy()
-                    tmp[col_rca] = tmp[col_rca].astype(str)
-                    tmp[col_nome] = tmp[col_nome].astype(str)
-                    mapa_rca_para_nome = dict(zip(tmp[col_rca], tmp[col_nome]))
 
+            if col_rca is not None:
+                df_r = df_rca.copy()
+                df_r[col_rca] = df_r[col_rca].astype(str)
+                # Preferir mapeamento explícito MESMO_*
+                if col_mesmo_cod is not None and col_mesmo_vend is not None:
+                    df_r[col_mesmo_cod] = df_r[col_mesmo_cod].astype(str)
+                    df_r[col_mesmo_vend] = df_r[col_mesmo_vend].astype(str)
+                    mapa_rca_para_cod = dict(zip(df_r[col_rca], df_r[col_mesmo_cod]))
+                    mapa_rca_para_nome = dict(zip(df_r[col_rca], df_r[col_mesmo_vend]))
+                else:
+                    # Fallback: unificar por nome (mesmo NOME_RCA => mesmo vendedor)
+                    if col_nome is not None:
+                        df_r[col_nome] = df_r[col_nome].astype(str)
+                        # escolher um código pivot por nome (primeiro)
+                        pivots = df_r.groupby(col_nome)[col_rca].first()
+                        mapa_nome_para_cod = pivots.to_dict()
+                        mapa_rca_para_cod = {rca: mapa_nome_para_cod.get(nome, rca) for rca, nome in zip(df_r[col_rca], df_r[col_nome])}
+                        mapa_rca_para_nome = dict(zip(df_r[col_rca], df_r[col_nome]))
+
+            # Aplicar mapeamento sobre a base de inadimplência
             if mapa_rca_para_nome:
                 df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str).map(mapa_rca_para_cod).fillna(df_inadimplencia['COD_VENDEDOR'].astype(str))
                 df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str).map(mapa_rca_para_nome).fillna(df_inadimplencia['NOME_VENDEDOR'])
             else:
                 df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str)
                 df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['NOME_VENDEDOR']
-        except Exception:
+        except Exception as _:
             df_inadimplencia['COD_UNIFICADO'] = df_inadimplencia['COD_VENDEDOR'].astype(str)
             df_inadimplencia['NOME_UNIFICADO'] = df_inadimplencia['NOME_VENDEDOR']
 
