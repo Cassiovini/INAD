@@ -103,8 +103,34 @@ def obter_dados_inadimplencia():
                 logger.info("💡 Faça upload do arquivo Excel na página inicial")
                 return None
         
-        # Carregar dados da aba BASE_INADI
-        df_inadimplencia = pd.read_excel(arquivo_excel, sheet_name='BASE_INADI')
+        # Carregar dados da planilha (detectar a aba correta de forma robusta)
+        xls = pd.ExcelFile(arquivo_excel)
+        abas_disponiveis = [str(s) for s in xls.sheet_names]
+        def _norm(texto):
+            t = str(texto).strip().upper()
+            # normalizações simples (sem unicodedata para evitar dependência)
+            t = (t.replace('Á','A').replace('Â','A').replace('Ã','A')
+                   .replace('É','E').replace('Ê','E')
+                   .replace('Í','I')
+                   .replace('Ó','O').replace('Ô','O').replace('Õ','O')
+                   .replace('Ú','U')
+                   .replace('Ç','C'))
+            t = t.replace(' ', '').replace('_','')
+            return t
+        mapa_norm_para_original = {_norm(n): n for n in abas_disponiveis}
+        candidatos_inadi = ['BASEINADI','BASEINAD','BASEINADIMPLENCIA','INADIMPLENCIA','INADIMPLENCIA','INAD']
+        aba_inadi = None
+        for cand in candidatos_inadi:
+            if cand in mapa_norm_para_original:
+                aba_inadi = mapa_norm_para_original[cand]
+                break
+        if aba_inadi is None:
+            # fallback: primeira aba
+            aba_inadi = abas_disponiveis[0]
+            logger.warning(f"⚠️ Aba 'BASE_INADI' não encontrada. Usando aba '{aba_inadi}'. Abas disponíveis: {abas_disponiveis}")
+        else:
+            logger.info(f"➡️ Aba de inadimplência selecionada: {aba_inadi}")
+        df_inadimplencia = pd.read_excel(arquivo_excel, sheet_name=aba_inadi)
         
         if df_inadimplencia.empty:
             logger.warning("⚠️ Aba BASE_INADI está vazia")
@@ -156,7 +182,16 @@ def obter_dados_inadimplencia():
         
         # Unificar nomes de vendedores pela BASE_RCA (um vendedor com 2 RCAs)
         try:
-            df_rca = pd.read_excel(arquivo_excel, sheet_name='BASE_RCA')
+            # Detectar aba de RCA de forma robusta
+            candidatos_rca = ['BASERCA','RCA','BASEVENDEDOR','VENDEDORES','VENDEDOR','RCABASE']
+            aba_rca = None
+            for cand in candidatos_rca:
+                if cand in mapa_norm_para_original:
+                    aba_rca = mapa_norm_para_original[cand]
+                    break
+            if aba_rca is None:
+                aba_rca = 'BASE_RCA'  # tentativa padrão (pode falhar e cair no except)
+            df_rca = pd.read_excel(arquivo_excel, sheet_name=aba_rca)
             if 'RCA' in df_rca.columns and 'NOME_RCA' in df_rca.columns:
                 df_rca = df_rca[['RCA', 'NOME_RCA']].copy()
                 df_rca['RCA'] = df_rca['RCA'].astype(str)
@@ -182,7 +217,16 @@ def obter_dados_inadimplencia():
         # Unificação por BASE_RCA (um vendedor com 2 RCAs)
         # ================================
         try:
-            df_rca = pd.read_excel(arquivo_excel, sheet_name='BASE_RCA')
+            # Detectar aba de RCA novamente (reutilizar heurística)
+            candidatos_rca = ['BASERCA','RCA','BASEVENDEDOR','VENDEDORES','VENDEDOR','RCABASE']
+            aba_rca = None
+            for cand in candidatos_rca:
+                if cand in mapa_norm_para_original:
+                    aba_rca = mapa_norm_para_original[cand]
+                    break
+            if aba_rca is None:
+                aba_rca = 'BASE_RCA'
+            df_rca = pd.read_excel(arquivo_excel, sheet_name=aba_rca)
             # Mapear nomes das colunas com heurística (tolerante a variações)
             colmap = {}
             for c in df_rca.columns:
