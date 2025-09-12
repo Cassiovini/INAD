@@ -18,7 +18,7 @@ app = Flask(__name__)
 
 # Arquivo para salvar observações
 OBSERVACOES_FILE = "observacoes_inadimplencia.json"
-GIST_TOKEN = os.environ.get('GIST_TOKEN')
+GIST_TOKEN = os.environ.get('GIST_TOKEN') or os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_TOKEN')
 GIST_ID = os.environ.get('GIST_ID')
 GIST_FILENAME = os.environ.get('GIST_FILENAME', 'observacoes_inadimplencia.json')
 
