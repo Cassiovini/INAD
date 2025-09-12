@@ -955,8 +955,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 thead th {{ position: sticky; top: 0; background: #ffffff; z-index: 1; }}
                 th, td {{ white-space: nowrap; }}
                 th {{
-                    background-color: #495057;
-                    color: white;
+                    background-color: #ffffff;
+                    color: #000000;
                     padding: 15px;
                     text-align: left;
                     font-weight: 600;
