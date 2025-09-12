@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify, redirect, url_for, send_file
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import requests
 import threading
 import webbrowser
 
@@ -17,6 +18,9 @@ app = Flask(__name__)
 
 # Arquivo para salvar observações
 OBSERVACOES_FILE = "observacoes_inadimplencia.json"
+GIST_TOKEN = os.environ.get('GIST_TOKEN')
+GIST_ID = os.environ.get('GIST_ID')
+GIST_FILENAME = os.environ.get('GIST_FILENAME', 'observacoes_inadimplencia.json')
 
 # Configuração de upload
 UPLOAD_FOLDER = 'uploads'
@@ -335,8 +339,26 @@ def calcular_metricas_inadimplencia(df_inadimplencia):
         return None
 
 def carregar_observacoes():
-    """Carrega observações salvas do Postgres (fallback JSON)."""
-    # Tenta DB primeiro
+    """Carrega observações salvas do Gist (fallback DB/JSON)."""
+    # 1) Tenta Gist
+    try:
+        if GIST_TOKEN and GIST_ID:
+            logger.info("☁️ carregar_observacoes: tentando Gist...")
+            headers = {"Authorization": f"token {GIST_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.get(f"https://api.github.com/gists/{GIST_ID}", headers=headers, timeout=15)
+            if r.status_code == 200:
+                data = r.json()
+                files = data.get('files', {})
+                if GIST_FILENAME in files and files[GIST_FILENAME].get('content') is not None:
+                    content = files[GIST_FILENAME]['content']
+                    lista = json.loads(content) if content.strip() else []
+                    logger.info(f"✅ carregar_observacoes (Gist): {len(lista)} registro(s)")
+                    return lista
+            else:
+                logger.warning(f"⚠️ carregar_observacoes (Gist): status {r.status_code}")
+    except Exception as e:
+        logger.warning(f"⚠️ carregar_observacoes (Gist): erro: {e}")
+    # 2) DB (se configurado)
     try:
         logger.info("🔌 carregar_observacoes: tentando DB...")
         conn = get_db_connection()
@@ -372,8 +394,33 @@ def carregar_observacoes():
     return []
 
 def salvar_observacao(observacao):
-    """Salva uma nova observação no Postgres (fallback JSON)."""
-    # Tenta DB
+    """Salva uma nova observação no Gist (fallback DB/JSON)."""
+    # 1) Tenta Gist
+    try:
+        if GIST_TOKEN and GIST_ID:
+            logger.info("📝 salvar_observacao: tentando Gist...")
+            # Carrega atual
+            atuais = carregar_observacoes()
+            observacao['id'] = len(atuais) + 1
+            observacao['data_envio'] = datetime.now().isoformat()
+            atuais.append(observacao)
+            payload = {
+                "files": {
+                    GIST_FILENAME: {
+                        "content": json.dumps(atuais, ensure_ascii=False, indent=2)
+                    }
+                }
+            }
+            headers = {"Authorization": f"token {GIST_TOKEN}", "Accept": "application/vnd.github+json"}
+            r = requests.patch(f"https://api.github.com/gists/{GIST_ID}", headers=headers, json=payload, timeout=20)
+            if r.status_code in (200, 201):
+                logger.info(f"✅ salvar_observacao: salva no Gist para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
+                return True
+            else:
+                logger.warning(f"⚠️ salvar_observacao (Gist): status {r.status_code} body={r.text[:200]}")
+    except Exception as e:
+        logger.warning(f"⚠️ salvar_observacao (Gist): erro: {e}")
+    # 2) DB
     try:
         logger.info("📝 salvar_observacao: tentando DB...")
         conn = get_db_connection()
