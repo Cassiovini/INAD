@@ -1335,7 +1335,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <table id="tabela-detalhamento">
                         <thead>
                             <tr>
-                                <th>Código Cliente</th>
+                                <th>DUPLICATA</th>
                                 <th>Nome Cliente</th>
                                 <th>Vendedor</th>
                                 <th>Valor Título</th>
