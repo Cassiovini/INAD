@@ -1723,6 +1723,26 @@ def observacoes_por_cliente(codigo):
         logger.error(f"❌ Erro ao listar observações do cliente {codigo}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/db_health')
+def db_health():
+    """Healthcheck de conexão com o Postgres (Neon)."""
+    try:
+        logger.info("🔍 /db_health: testando conexão DB...")
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'ok': False, 'error': 'Sem conexão. Verifique DATABASE_URL/SSL e rede.'}), 500
+        with conn.cursor() as cur:
+            cur.execute('SELECT 1')
+            _ = cur.fetchone()
+            cur.execute('SELECT version()')
+            version = cur.fetchone()[0]
+        conn.close()
+        logger.info("✅ /db_health: conexão OK")
+        return jsonify({'ok': True, 'version': version})
+    except Exception as e:
+        logger.error(f"❌ /db_health: erro: {e}")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/ping')
 def ping():
     """Rota de keepalive para evitar inatividade no Render"""
