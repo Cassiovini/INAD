@@ -1790,6 +1790,31 @@ def db_health():
         logger.error(f"❌ /db_health: erro: {e}")
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+@app.route('/gist_health')
+def gist_health():
+    """Healthcheck de integração com GitHub Gist (somente leitura)."""
+    try:
+        info = {
+            'has_token': bool(GIST_TOKEN),
+            'has_gist_id': bool(GIST_ID),
+            'filename': GIST_FILENAME,
+        }
+        if not GIST_TOKEN or not GIST_ID:
+            return jsonify({'ok': False, 'error': 'GIST_TOKEN ou GIST_ID ausente', **info}), 400
+        headers = {"Authorization": f"token {GIST_TOKEN}", "Accept": "application/vnd.github+json"}
+        r = requests.get(f"https://api.github.com/gists/{GIST_ID}", headers=headers, timeout=15)
+        info['status_code'] = r.status_code
+        if r.status_code != 200:
+            return jsonify({'ok': False, 'error': f'status {r.status_code}', **info}), 502
+        data = r.json()
+        files = data.get('files', {})
+        info['files'] = list(files.keys())
+        present = GIST_FILENAME in files
+        info['file_present'] = present
+        return jsonify({'ok': True, **info})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 @app.route('/ping')
 def ping():
     """Rota de keepalive para evitar inatividade no Render"""
