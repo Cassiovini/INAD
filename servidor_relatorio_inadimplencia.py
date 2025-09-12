@@ -360,7 +360,8 @@ def carregar_observacoes():
         logger.warning(f"⚠️ carregar_observacoes (Gist): erro: {e}")
     # 2) DB (se configurado)
     try:
-        logger.info("🔌 carregar_observacoes: tentando DB...")
+        if os.environ.get('DATABASE_URL'):
+            logger.info("🔌 carregar_observacoes: tentando DB...")
         conn = get_db_connection()
         if conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -422,7 +423,8 @@ def salvar_observacao(observacao):
         logger.warning(f"⚠️ salvar_observacao (Gist): erro: {e}")
     # 2) DB
     try:
-        logger.info("📝 salvar_observacao: tentando DB...")
+        if os.environ.get('DATABASE_URL'):
+            logger.info("📝 salvar_observacao: tentando DB...")
         conn = get_db_connection()
         if conn:
             with conn.cursor() as cur:
@@ -475,7 +477,6 @@ def get_db_connection():
     try:
         db_url = os.environ.get('DATABASE_URL')
         if not db_url:
-            logger.warning("⚠️ DATABASE_URL não configurado; usando JSON como fallback")
             return None
         logger.info("🔗 Conectando ao Postgres...")
         conn = psycopg2.connect(db_url)
