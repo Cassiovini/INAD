@@ -338,6 +338,7 @@ def carregar_observacoes():
     """Carrega observações salvas do Postgres (fallback JSON)."""
     # Tenta DB primeiro
     try:
+        logger.info("🔌 carregar_observacoes: tentando DB...")
         conn = get_db_connection()
         if conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -355,22 +356,26 @@ def carregar_observacoes():
                 cur.execute("SELECT id, nome_vendedor, codigo_vendedor, observacao, data_observacao, data_envio FROM observacoes ORDER BY id ASC")
                 rows = cur.fetchall()
                 conn.close()
+                logger.info(f"✅ carregar_observacoes: {len(rows)} registro(s) do DB")
                 return list(rows)
     except Exception as e:
-        logger.warning(f"⚠️ DB indisponível ao carregar observações: {e}")
+        logger.warning(f"⚠️ carregar_observacoes: DB indisponível: {e}")
     # Fallback JSON
     try:
         if os.path.exists(OBSERVACOES_FILE):
             with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                logger.info(f"📄 carregar_observacoes (JSON): {len(data)} registro(s)")
+                return data
     except Exception as e:
-        logger.error(f"❌ Erro ao carregar observações (JSON): {e}")
+        logger.error(f"❌ carregar_observacoes (JSON): erro: {e}")
     return []
 
 def salvar_observacao(observacao):
     """Salva uma nova observação no Postgres (fallback JSON)."""
     # Tenta DB
     try:
+        logger.info("📝 salvar_observacao: tentando DB...")
         conn = get_db_connection()
         if conn:
             with conn.cursor() as cur:
@@ -400,10 +405,10 @@ def salvar_observacao(observacao):
                 )
                 conn.commit()
                 conn.close()
-                logger.info(f"✅ Observação salva (DB): {observacao['nome_vendedor']}")
+                logger.info(f"✅ salvar_observacao: salva no DB para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
                 return True
     except Exception as e:
-        logger.warning(f"⚠️ DB indisponível ao salvar observação: {e}")
+        logger.warning(f"⚠️ salvar_observacao: DB indisponível: {e}")
     # Fallback JSON
     try:
         observacoes = carregar_observacoes()
@@ -412,10 +417,10 @@ def salvar_observacao(observacao):
         observacoes.append(observacao)
         with open(OBSERVACOES_FILE, 'w', encoding='utf-8') as f:
             json.dump(observacoes, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Observação salva (JSON): {observacao['nome_vendedor']}")
+        logger.info(f"✅ salvar_observacao: salva em JSON para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
         return True
     except Exception as e:
-        logger.error(f"❌ Erro ao salvar observação (JSON): {e}")
+        logger.error(f"❌ salvar_observacao (JSON): erro: {e}")
         return False
 
 def get_db_connection():
@@ -423,10 +428,14 @@ def get_db_connection():
     try:
         db_url = os.environ.get('DATABASE_URL')
         if not db_url:
+            logger.warning("⚠️ DATABASE_URL não configurado; usando JSON como fallback")
             return None
+        logger.info("🔗 Conectando ao Postgres...")
         conn = psycopg2.connect(db_url)
+        logger.info("✅ Conexão Postgres OK")
         return conn
-    except Exception as _:
+    except Exception as e:
+        logger.warning(f"⚠️ Falha ao conectar ao Postgres: {e}")
         return None
 
 def migrate_json_to_db_if_needed():
@@ -434,8 +443,10 @@ def migrate_json_to_db_if_needed():
     Regra: se a tabela existir e tiver registros, não migra. Se vazia e JSON existir, insere todos.
     """
     try:
+        logger.info("🚚 Iniciando migração JSON->DB (se necessário)...")
         conn = get_db_connection()
         if not conn:
+            logger.info("ℹ️ Migração: sem conexão DB; pulando")
             return
         with conn.cursor() as cur:
             # Garantir tabela
@@ -457,15 +468,18 @@ def migrate_json_to_db_if_needed():
             qtd = cur.fetchone()[0]
             if qtd and int(qtd) > 0:
                 conn.close()
+                logger.info(f"ℹ️ Migração: tabela já possui {qtd} registro(s); nada a fazer")
                 return
             # Carregar JSON se existir
             if not os.path.exists(OBSERVACOES_FILE):
                 conn.close()
+                logger.info("ℹ️ Migração: JSON inexistente; nada a migrar")
                 return
             with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
                 dados = json.load(f)
             if not isinstance(dados, list) or len(dados) == 0:
                 conn.close()
+                logger.info("ℹ️ Migração: JSON vazio; nada a migrar")
                 return
             # Inserir em batch
             inseridos = 0
@@ -494,7 +508,7 @@ def migrate_json_to_db_if_needed():
             conn.commit()
             conn.close()
             if inseridos > 0:
-                logger.info(f"✅ Migração JSON->DB concluída: {inseridos} observações migradas")
+                logger.info(f"✅ Migração JSON->DB concluída: {inseridos} observação(ões) migradas")
     except Exception as e:
         logger.warning(f"⚠️ Falha na migração automática JSON->DB: {e}")
 
