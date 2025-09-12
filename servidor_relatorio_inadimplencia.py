@@ -339,8 +339,18 @@ def calcular_metricas_inadimplencia(df_inadimplencia):
         return None
 
 def carregar_observacoes():
-    """Carrega observações salvas do Gist (fallback DB/JSON)."""
-    # 1) Tenta Gist
+    """Carrega observações priorizando JSON local (site), depois Gist e por fim DB."""
+    # 1) JSON local (prioridade para exibir no site de imediato)
+    try:
+        if os.path.exists(OBSERVACOES_FILE):
+            with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                logger.info(f"📄 carregar_observacoes (JSON): {len(data)} registro(s)")
+                if isinstance(data, list) and len(data) >= 0:
+                    return data
+    except Exception as e:
+        logger.error(f"❌ carregar_observacoes (JSON): erro: {e}")
+    # 2) Gist
     try:
         if GIST_TOKEN and GIST_ID:
             logger.info("☁️ carregar_observacoes: tentando Gist...")
@@ -358,7 +368,7 @@ def carregar_observacoes():
                 logger.warning(f"⚠️ carregar_observacoes (Gist): status {r.status_code}")
     except Exception as e:
         logger.warning(f"⚠️ carregar_observacoes (Gist): erro: {e}")
-    # 2) DB (se configurado)
+    # 3) DB (se configurado)
     try:
         if os.environ.get('DATABASE_URL'):
             logger.info("🔌 carregar_observacoes: tentando DB...")
@@ -395,16 +405,32 @@ def carregar_observacoes():
     return []
 
 def salvar_observacao(observacao):
-    """Salva uma nova observação no Gist (fallback DB/JSON)."""
-    # 1) Tenta Gist
+    """Salva a observação no JSON (site) e tenta replicar no Gist; mantém DB como extra."""
+    sucesso_json = False
+    # 1) Salvar JSON local SEMPRE para refletir no site
+    try:
+        atuais = []
+        if os.path.exists(OBSERVACOES_FILE):
+            with open(OBSERVACOES_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    atuais = json.load(f)
+                except Exception:
+                    atuais = []
+        observacao['id'] = (len(atuais) + 1) if isinstance(atuais, list) else 1
+        observacao['data_envio'] = datetime.now().isoformat()
+        if not isinstance(atuais, list):
+            atuais = []
+        atuais.append(observacao)
+        with open(OBSERVACOES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(atuais, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ salvar_observacao: salva em JSON para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
+        sucesso_json = True
+    except Exception as e:
+        logger.error(f"❌ salvar_observacao (JSON): erro: {e}")
+    # 2) Tentar Gist (replicação)
     try:
         if GIST_TOKEN and GIST_ID:
             logger.info("📝 salvar_observacao: tentando Gist...")
-            # Carrega atual
-            atuais = carregar_observacoes()
-            observacao['id'] = len(atuais) + 1
-            observacao['data_envio'] = datetime.now().isoformat()
-            atuais.append(observacao)
             payload = {
                 "files": {
                     GIST_FILENAME: {
@@ -416,12 +442,11 @@ def salvar_observacao(observacao):
             r = requests.patch(f"https://api.github.com/gists/{GIST_ID}", headers=headers, json=payload, timeout=20)
             if r.status_code in (200, 201):
                 logger.info(f"✅ salvar_observacao: salva no Gist para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
-                return True
             else:
                 logger.warning(f"⚠️ salvar_observacao (Gist): status {r.status_code} body={r.text[:200]}")
     except Exception as e:
         logger.warning(f"⚠️ salvar_observacao (Gist): erro: {e}")
-    # 2) DB
+    # 3) DB (opcional)
     try:
         if os.environ.get('DATABASE_URL'):
             logger.info("📝 salvar_observacao: tentando DB...")
@@ -458,19 +483,7 @@ def salvar_observacao(observacao):
                 return True
     except Exception as e:
         logger.warning(f"⚠️ salvar_observacao: DB indisponível: {e}")
-    # Fallback JSON
-    try:
-        observacoes = carregar_observacoes()
-        observacao['id'] = len(observacoes) + 1
-        observacao['data_envio'] = datetime.now().isoformat()
-        observacoes.append(observacao)
-        with open(OBSERVACOES_FILE, 'w', encoding='utf-8') as f:
-            json.dump(observacoes, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ salvar_observacao: salva em JSON para vendedor='{observacao['nome_vendedor']}', codigo='{observacao['codigo_vendedor']}'")
-        return True
-    except Exception as e:
-        logger.error(f"❌ salvar_observacao (JSON): erro: {e}")
-        return False
+    return sucesso_json
 
 def get_db_connection():
     """Abre conexão com Postgres via DATABASE_URL (Neon)."""
