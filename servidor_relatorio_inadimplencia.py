@@ -1378,6 +1378,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
             nome_vendedor_detalhe = row['NOME_UNIFICADO'] if 'NOME_UNIFICADO' in df_inadimplencia.columns else row['NOME_VENDEDOR']
             html_content += f"""
                             <tr>
+                                <td>{row['DUPLICATA'] if 'DUPLICATA' in df_inadimplencia.columns else (row['DUPLIC'] if 'DUPLIC' in df_inadimplencia.columns else '')}</td>
                                 <td>{row['COD_CLIENTE']}</td>
                                 <td>{row['NOME_CLIENTE']}</td>
                                 <td>{nome_vendedor_detalhe}</td>
