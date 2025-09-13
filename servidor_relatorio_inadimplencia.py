@@ -1385,8 +1385,12 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                         <tbody>
         """
         
-        # Adicionar detalhamento por cliente (ordenado por dias de atraso)
-        df_inadimplencia_ordenado = df_inadimplencia.sort_values('DIAS_ATRASO', ascending=True)
+        # Adicionar detalhamento por cliente (ordenado por vendedor em ordem alfabética)
+        col_vendedor_sort = 'NOME_UNIFICADO' if 'NOME_UNIFICADO' in df_inadimplencia.columns else 'NOME_VENDEDOR'
+        try:
+            df_inadimplencia_ordenado = df_inadimplencia.sort_values([col_vendedor_sort, 'NOME_CLIENTE'], ascending=[True, True])
+        except Exception:
+            df_inadimplencia_ordenado = df_inadimplencia.sort_values(col_vendedor_sort, ascending=True)
         
         for _, row in df_inadimplencia_ordenado.iterrows():
             # Determinar status do título
