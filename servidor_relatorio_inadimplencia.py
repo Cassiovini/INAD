@@ -1392,8 +1392,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <td>{row['NOME_CLIENTE']}</td>
                                 <td>{nome_vendedor_detalhe}</td>
                                 <td><strong>{formatar_valor(row['VALOR_TITULO'])}</strong></td>
-                                <td>{row['DATA_EMISSAO'] if 'DATA_EMISSAO' in df_inadimplencia.columns else ''}</td>
-                                <td>{row['DATA_VENCIMENTO']}</td>
+                                <td>{formatar_data(row['DATA_EMISSAO']) if 'DATA_EMISSAO' in df_inadimplencia.columns else '-'}</td>
+                                <td>{formatar_data(row['DATA_VENCIMENTO'])}</td>
                                 <td><strong>{row['DIAS_ATRASO']} dias</strong></td>
                                 <td class="{status_class}">{status_titulo}</td>
                                 <td>
