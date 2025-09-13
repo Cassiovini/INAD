@@ -1323,12 +1323,10 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <table id="tabela-resumo">
                         <thead>
                             <tr>
-                                <th>Duplicata</th>
+                                <th>RCA</th>
                                 <th>Vendedor</th>
                                 <th>Em Aberto</th>
                                 <th>Qtd Títulos</th>
-                                <th>Dias Médio Atraso</th>
-                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1355,8 +1353,6 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <td>{nome_vendedor_resumo}</td>
                                 <td>{formatar_valor(row['VALOR_EM_ABERTO'])}</td>
                                 <td>{row['QTD_TITULOS']:,}</td>
-                                <td>{row['DIAS_ATRASO_MEDIO']:.0f} dias</td>
-                                <td class="{status_class}">{status_text}</td>
                             </tr>
             """
         
