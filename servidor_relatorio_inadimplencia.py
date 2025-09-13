@@ -45,6 +45,23 @@ def formatar_valor(valor, tipo='moeda'):
     except:
         return "R$ 0,00"
 
+def formatar_data(valor):
+    """Formata datas para dd/mm/aaaa, removendo horário quando houver."""
+    try:
+        if valor is None or (isinstance(valor, float) and pd.isna(valor)):
+            return "-"
+        # Se já for datetime-like
+        if hasattr(valor, 'strftime'):
+            return valor.strftime('%d/%m/%Y')
+        dt = pd.to_datetime(valor, errors='coerce')
+        if pd.isna(dt):
+            s = str(valor)
+            # Tentar cortar horário de strings ISO ou com espaços
+            return s.split('T')[0].split(' ')[0]
+        return dt.strftime('%d/%m/%Y')
+    except Exception:
+        return str(valor)
+
 def get_color_atingimento(percentual):
     """Retorna cor baseada no percentual de inadimplência"""
     try:
