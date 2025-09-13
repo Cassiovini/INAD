@@ -168,6 +168,14 @@ def obter_dados_inadimplencia():
                 df_inadimplencia['VALOR_TITULO'] = pd.to_numeric(df_inadimplencia['VALOR_TITULO'], errors='coerce').fillna(0.0)
         except Exception:
             pass
+        # Calcular Data Emissão se ausente (Vencimento - Dias de Atraso)
+        try:
+            if 'DATA_EMISSAO' not in df_inadimplencia.columns and 'DATA_VENCIMENTO' in df_inadimplencia.columns and 'DIAS_ATRASO' in df_inadimplencia.columns:
+                _dv = pd.to_datetime(df_inadimplencia['DATA_VENCIMENTO'], errors='coerce')
+                _dias = pd.to_numeric(df_inadimplencia['DIAS_ATRASO'], errors='coerce').fillna(0)
+                df_inadimplencia['DATA_EMISSAO'] = _dv - pd.to_timedelta(_dias, unit='D')
+        except Exception:
+            pass
         if 'NOME_VENDEDOR' not in df_inadimplencia.columns:
             if 'NOME_RCA' in df_inadimplencia.columns:
                 df_inadimplencia['NOME_VENDEDOR'] = df_inadimplencia['NOME_RCA']
@@ -1350,6 +1358,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <th>Nome Cliente</th>
                                 <th>Vendedor</th>
                                 <th>Valor Título</th>
+                                <th>Data Emissão</th>
                                 <th>Data Vencimento</th>
                                 <th>Dias Atraso</th>
                                 <th>Status</th>
@@ -1383,6 +1392,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                                 <td>{row['NOME_CLIENTE']}</td>
                                 <td>{nome_vendedor_detalhe}</td>
                                 <td><strong>{formatar_valor(row['VALOR_TITULO'])}</strong></td>
+                                <td>{row['DATA_EMISSAO'] if 'DATA_EMISSAO' in df_inadimplencia.columns else ''}</td>
                                 <td>{row['DATA_VENCIMENTO']}</td>
                                 <td><strong>{row['DIAS_ATRASO']} dias</strong></td>
                                 <td class="{status_class}">{status_titulo}</td>
