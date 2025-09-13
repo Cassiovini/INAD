@@ -154,7 +154,8 @@ def obter_dados_inadimplencia():
                 'DIAS': 'DIAS_ATRASO',
                 'CLIENTE': 'NOME_CLIENTE',
                 'VENC': 'DATA_VENCIMENTO',
-                'DUPLIC': 'COD_CLIENTE'
+                'DUPLIC': 'DUPLICATA',
+                'COD': 'COD_CLIENTE'
             })
         
         # Adicionar colunas que podem não existir
@@ -1297,7 +1298,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <table id="tabela-resumo">
                         <thead>
                             <tr>
-                                <th>Código</th>
+                                <th>Duplicata</th>
                                 <th>Vendedor</th>
                                 <th>Em Aberto</th>
                                 <th>Qtd Títulos</th>
@@ -1344,7 +1345,8 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                     <table id="tabela-detalhamento">
                         <thead>
                             <tr>
-                                <th>DUPLICATA</th>
+                                <th>Duplicata</th>
+                                <th>Codigo do cliente</th>
                                 <th>Nome Cliente</th>
                                 <th>Vendedor</th>
                                 <th>Valor Título</th>
@@ -1656,8 +1658,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                         const nomeBase = nomeVendedor.includes(' - ')
                             ? nomeVendedor.split(' - ').slice(-1)[0].trim()
                             : nomeVendedor.trim();
-                        const statusLinha = colunas[5].textContent.trim();
-                        // Índices atualizados: Valor Título(3), Data(4), Dias(5) -> após remoção de colunas, Dias está em 5? Não; atual: [0..7]: 0 cod,1 nome,2 vend,3 valor,4 venc,5 dias,6 status,7 obs
+                        const statusLinha = colunas[6].textContent.trim();
                         const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
                         const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                         
@@ -1665,7 +1666,7 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                         
                         if (vendedor && nomeBase !== vendedor) mostrar = false;
                         if (status && statusLinha !== status) mostrar = false;
-                        if (dias && !filtrarPorDias(diasAtraso, dias)) mostrar = false;
+                        // Detalhamento: priorizar filtro por Vendedor
                         if (valor && valorTitulo < parseFloat(valor)) mostrar = false;
                         
                         linha.style.display = mostrar ? '' : 'none';
