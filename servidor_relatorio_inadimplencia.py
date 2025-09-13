@@ -1681,14 +1681,15 @@ def gerar_html_relatorio(df_inadimplencia, df_metricas, observacoes):
                 
                 linhas.forEach(linha => {{
                     const colunas = linha.querySelectorAll('td');
-                    if (colunas.length >= 6) {{
-                        const nomeVendedor = colunas[2].textContent.trim();
+                    if (colunas.length >= 10) {{
+                        // 0 Duplicata, 1 COD Cliente, 2 Nome Cliente, 3 Vendedor, 4 Valor, 5 Emissão, 6 Vencimento, 7 Dias, 8 Status, 9 Obs
+                        const nomeVendedor = colunas[3].textContent.trim();
                         const nomeBase = nomeVendedor.includes(' - ')
                             ? nomeVendedor.split(' - ').slice(-1)[0].trim()
                             : nomeVendedor.trim();
-                        const statusLinha = colunas[6].textContent.trim();
-                        const diasAtraso = parseFloat(colunas[5].textContent.replace(' dias', ''));
-                        const valorTitulo = parseFloat(colunas[3].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
+                        const statusLinha = colunas[8].textContent.trim();
+                        const diasAtraso = parseFloat(colunas[7].textContent.replace(' dias', ''));
+                        const valorTitulo = parseFloat(colunas[4].textContent.replace('R$ ', '').replace('.', '').replace(',', '.'));
                         
                         let mostrar = true;
                         
