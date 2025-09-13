@@ -158,6 +158,15 @@ def obter_dados_inadimplencia():
             })
         
         # Adicionar colunas que podem não existir
+        # Garantir que o valor do título venha da coluna 'VALOR' da planilha
+        try:
+            if 'VALOR_TITULO' not in df_inadimplencia.columns and 'VALOR' in df_inadimplencia.columns:
+                df_inadimplencia['VALOR_TITULO'] = df_inadimplencia['VALOR']
+            # Coagir a numérico para evitar None/NaN na exibição
+            if 'VALOR_TITULO' in df_inadimplencia.columns:
+                df_inadimplencia['VALOR_TITULO'] = pd.to_numeric(df_inadimplencia['VALOR_TITULO'], errors='coerce').fillna(0.0)
+        except Exception:
+            pass
         if 'NOME_VENDEDOR' not in df_inadimplencia.columns:
             if 'NOME_RCA' in df_inadimplencia.columns:
                 df_inadimplencia['NOME_VENDEDOR'] = df_inadimplencia['NOME_RCA']
